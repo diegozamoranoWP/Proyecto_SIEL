@@ -5,3 +5,119 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model Role {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id      Int    @id @default(autoincrement())
+  name    String
+  phone   String @unique
+  role_id Int
+
+  role Role @relation(fields: [role_id], references: [id])
+
+  obras_creadas  Obra[]
+  tareas_creadas Tarea[]
+  reportes       ReporteAvance[]
+  pagos          Pago[]
+
+  asignaciones_como_worker    TaskAssignment[] @relation("TaskAssignmentWorker")
+  asignaciones_como_asignador TaskAssignment[] @relation("TaskAssignmentAssignedBy")
+
+  @@map("users")
+}
+
+
+model Obra {
+  id         Int    @id @default(autoincrement())
+  name       String
+  status     String
+  created_by Int
+
+  createdBy User @relation(fields: [created_by], references: [id])
+
+  tareas Tarea[]
+
+  @@map("obras")
+}
+
+model Tarea {
+  id         Int     @id @default(autoincrement())
+  obra_id    Int
+  title      String
+  unit       String
+  unit_price Float
+  status     String
+  created_by Int
+
+  obra      Obra @relation(fields: [obra_id], references: [id])
+  createdBy User @relation(fields: [created_by], references: [id])
+
+  asignaciones TaskAssignment[]
+  reportes     ReporteAvance[]
+
+  @@map("tareas")
+}
+
+model TaskAssignment {
+  id          Int @id @default(autoincrement())
+  task_id     Int
+  worker_id   Int
+  assigned_by Int
+
+  task        Tarea @relation(fields: [task_id], references: [id])
+
+  worker      User  @relation("TaskAssignmentWorker", fields: [worker_id], references: [id])
+  asignadoPor User  @relation("TaskAssignmentAssignedBy", fields: [assigned_by], references: [id])
+
+  @@map("task_assignments")
+}
+
+model ReporteAvance {
+  id            Int   @id @default(autoincrement())
+  task_id       Int
+  worker_id     Int
+  reported_qty  Float
+  review_status String
+
+  task   Tarea @relation(fields: [task_id], references: [id])
+  worker User  @relation(fields: [worker_id], references: [id])
+
+  pago_items PagoItem[]
+
+  @@map("reportes_avance")
+}
+
+model Pago {
+  id              Int     @id @default(autoincrement())
+  worker_id       Int
+  period          String
+  total_por_pagar Float
+  total_pagado    Float
+  status          String
+
+  worker User @relation(fields: [worker_id], references: [id])
+
+  items PagoItem[]
+
+  @@map("pagos")
+}
+
+model PagoItem {
+  id         Int   @id @default(autoincrement())
+  pago_id    Int
+  reporte_id Int
+  subtotal   Float
+
+  pago    Pago          @relation(fields: [pago_id], references: [id])
+  reporte ReporteAvance @relation(fields: [reporte_id], references: [id])
+
+  @@map("pago_items")
+}
