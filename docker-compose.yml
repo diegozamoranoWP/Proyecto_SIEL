@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: siel_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: siel_user
+      POSTGRES_PASSWORD: siel_password
+      POSTGRES_DB: siel_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
