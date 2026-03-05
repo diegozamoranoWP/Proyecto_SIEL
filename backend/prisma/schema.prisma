@@ -4,11 +4,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Role {
   id   Int    @id @default(autoincrement())
-  name String @unique
+  name String @unique // admin, jefe_obra, trabajador
 
   users User[]
 
@@ -16,92 +17,159 @@ model Role {
 }
 
 model User {
-  id      Int    @id @default(autoincrement())
-  name    String
-  phone   String @unique
-  role_id Int
+  id         Int      @id @default(autoincrement())
+  role_id    Int
+  full_name  String
+  email      String?  @unique
+  phone      String   @unique
+  created_at DateTime @default(now())
 
   role Role @relation(fields: [role_id], references: [id])
 
-  obras_creadas  Obra[]
-  tareas_creadas Tarea[]
-  reportes       ReporteAvance[]
-  pagos          Pago[]
-
-  asignaciones_como_worker    TaskAssignment[] @relation("TaskAssignmentWorker")
-  asignaciones_como_asignador TaskAssignment[] @relation("TaskAssignmentAssignedBy")
+  obras_creadas               Obra[]
+  tareas_creadas              Tarea[]
+  asignaciones_como_worker    TaskAssignment[] @relation("WorkerRelation")
+  asignaciones_como_asignador TaskAssignment[] @relation("AssignedByRelation")
+  reportes                    Reporte[]
+  wallet                      Wallet?
+  pagos                       Pago[]
 
   @@map("users")
 }
 
-
 model Obra {
-  id         Int    @id @default(autoincrement())
-  name       String
-  status     String
-  created_by Int
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  created_by  Int
+  created_at  DateTime @default(now())
 
-  createdBy User @relation(fields: [created_by], references: [id])
-
-  tareas Tarea[]
+  creador User    @relation(fields: [created_by], references: [id])
+  tareas  Tarea[]
 
   @@map("obras")
 }
 
-model Tarea {
-  id         Int     @id @default(autoincrement())
-  obra_id    Int
-  title      String
-  unit       String
-  unit_price Float
-  status     String
-  created_by Int
+model Partida {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  precio_base Float
 
-  obra      Obra @relation(fields: [obra_id], references: [id])
-  createdBy User @relation(fields: [created_by], references: [id])
+  tareas Tarea[]
+
+  @@map("partidas")
+}
+
+model Tarea {
+  id           Int      @id @default(autoincrement())
+  obra_id      Int
+  partida_id   Int
+  titulo       String
+  descripcion  String?
+  precio_trato Float
+  estado       String   @default("pendiente") // pendiente, asignada, en_progreso, en_revision, aprobada, rechazada, pagada
+  created_by   Int
+  created_at   DateTime @default(now())
+
+  obra      Obra    @relation(fields: [obra_id], references: [id])
+  partida   Partida @relation(fields: [partida_id], references: [id])
+  creador   User    @relation(fields: [created_by], references: [id])
 
   asignaciones TaskAssignment[]
-  reportes     ReporteAvance[]
+  materiales   TaskMaterial[]
+  reportes     Reporte[]
+  pago_items   PagoItem[]
 
   @@map("tareas")
 }
 
 model TaskAssignment {
-  id          Int @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   task_id     Int
   worker_id   Int
   assigned_by Int
+  accepted    Boolean   @default(false)
+  accepted_at DateTime?
+  assigned_at DateTime  @default(now())
 
-  task        Tarea @relation(fields: [task_id], references: [id])
-
-  worker      User  @relation("TaskAssignmentWorker", fields: [worker_id], references: [id])
-  asignadoPor User  @relation("TaskAssignmentAssignedBy", fields: [assigned_by], references: [id])
+  tarea       Tarea @relation(fields: [task_id], references: [id])
+  worker      User  @relation("WorkerRelation", fields: [worker_id], references: [id])
+  asignadoPor User  @relation("AssignedByRelation", fields: [assigned_by], references: [id])
 
   @@map("task_assignments")
 }
 
-model ReporteAvance {
-  id            Int   @id @default(autoincrement())
-  task_id       Int
-  worker_id     Int
-  reported_qty  Float
-  review_status String
+model Material {
+  id     Int    @id @default(autoincrement())
+  nombre String
+  unidad String
 
-  task   Tarea @relation(fields: [task_id], references: [id])
+  task_materials TaskMaterial[]
+
+  @@map("materiales")
+}
+
+model TaskMaterial {
+  id          Int   @id @default(autoincrement())
+  task_id     Int
+  material_id Int
+  cantidad    Float
+
+  tarea    Tarea    @relation(fields: [task_id], references: [id])
+  material Material @relation(fields: [material_id], references: [id])
+
+  @@map("task_materials")
+}
+
+model Reporte {
+  id              Int      @id @default(autoincrement())
+  task_id         Int
+  worker_id       Int
+  comentario      String?
+  estado_revision String   @default("pendiente") // pendiente, aprobado, rechazado
+  created_at      DateTime @default(now())
+
+  tarea  Tarea @relation(fields: [task_id], references: [id])
   worker User  @relation(fields: [worker_id], references: [id])
 
-  pago_items PagoItem[]
+  evidencias Evidencia[]
 
-  @@map("reportes_avance")
+  @@map("reportes")
+}
+
+model Evidencia {
+  id          Int      @id @default(autoincrement())
+  reporte_id  Int
+  image_url   String
+  tipo        String
+  uploaded_at DateTime @default(now())
+
+  reporte Reporte @relation(fields: [reporte_id], references: [id])
+
+  @@map("evidencias")
+}
+
+model Wallet {
+  id               Int      @id @default(autoincrement())
+  worker_id        Int      @unique
+  saldo_proyectado Float    @default(0)
+  saldo_disponible Float    @default(0)
+  updated_at       DateTime @updatedAt
+
+  worker User @relation(fields: [worker_id], references: [id])
+
+  @@map("wallets")
 }
 
 model Pago {
-  id              Int     @id @default(autoincrement())
-  worker_id       Int
-  period          String
-  total_por_pagar Float
-  total_pagado    Float
-  status          String
+  id             Int      @id @default(autoincrement())
+  worker_id      Int
+  periodo_inicio DateTime
+  periodo_fin    DateTime
+  total          Float
+  estado         String   @default("pendiente") // pendiente, pagado, cancelado
+  creado_en      DateTime @default(now())
 
   worker User @relation(fields: [worker_id], references: [id])
 
@@ -111,13 +179,27 @@ model Pago {
 }
 
 model PagoItem {
-  id         Int   @id @default(autoincrement())
-  pago_id    Int
-  reporte_id Int
-  subtotal   Float
+  id          Int      @id @default(autoincrement())
+  pago_id     Int
+  task_id     Int
+  monto       Float
+  descripcion String?
+  created_at  DateTime @default(now())
 
-  pago    Pago          @relation(fields: [pago_id], references: [id])
-  reporte ReporteAvance @relation(fields: [reporte_id], references: [id])
+  pago  Pago  @relation(fields: [pago_id], references: [id])
+  tarea Tarea @relation(fields: [task_id], references: [id])
 
   @@map("pago_items")
+}
+
+model WhatsappMessage {
+  id         Int      @id @default(autoincrement())
+  phone      String
+  message    String?
+  direction  String // inbound, outbound
+  message_id String?  @unique
+  status     String?
+  created_at DateTime @default(now())
+
+  @@map("whatsapp_messages")
 }
