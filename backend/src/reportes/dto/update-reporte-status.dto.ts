@@ -1,6 +1,6 @@
-import { IsString } from 'class-validator';
+import { IsIn } from 'class-validator';
 
 export class UpdateReporteStatusDto {
-    @IsString()
+    @IsIn(['pendiente', 'aprobado', 'rechazado'])
     estado_revision: string;
 }

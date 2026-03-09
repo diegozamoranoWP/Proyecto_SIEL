@@ -1,4 +1,4 @@
-import { IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdateTareaDto {
     @IsOptional()
@@ -11,10 +11,19 @@ export class UpdateTareaDto {
 
     @IsOptional()
     @IsNumber()
+    @Min(0)
     precio_trato?: number;
 
     @IsOptional()
-    @IsString()
+    @IsIn([
+        'pendiente',
+        'asignada',
+        'en_progreso',
+        'en_revision',
+        'aprobada',
+        'rechazada',
+        'pagada',
+    ])
     estado?: string;
 
     @IsOptional()

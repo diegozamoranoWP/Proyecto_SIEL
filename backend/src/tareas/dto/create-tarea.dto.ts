@@ -1,4 +1,4 @@
-import { IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Min, IsNotEmpty } from 'class-validator';
 
 export class CreateTareaDto {
     @IsInt()
@@ -8,6 +8,7 @@ export class CreateTareaDto {
     partida_id: number;
 
     @IsString()
+    @IsNotEmpty()
     titulo: string;
 
     @IsOptional()
@@ -15,6 +16,7 @@ export class CreateTareaDto {
     descripcion?: string;
 
     @IsNumber()
+    @Min(0)
     precio_trato: number;
 
     @IsInt()
